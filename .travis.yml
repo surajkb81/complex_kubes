@@ -1,0 +1,28 @@
+sudo: required
+services:
+  - docker
+env:
+  global: 
+    - SHA=$(git rev-parse HEAD)
+    - CLOUDSDK_CORE_DISABLE_PROMPTS=1
+before_install:
+  -  openssl aes-256-cbc -K $encrypted_a780e09dea71_key -iv $encrypted_a780e09dea71_iv -in gcloud_key.json.enc -out ./k8s/gcloud_key.json -d
+  - curl https://sdk.cloud.google.com | bash > /dev/null;
+  - source $HOME/google-cloud-sdk/path.bash.inc
+  - gcloud components update kubectl
+  - gcloud auth activate-service-account --key-file gcloud_key.json.json
+  - gcloud config set project skilful-berm-2139393
+  - gcloud config set compute/zone user-cenral1-a
+  - gcloud container clusters get-credentials multi-cluster
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+  - docker build -t surajkb81/complex_kubes -f ./client/Dockerfile.dev ./client
+
+  script:
+    - docker run surajkb81/complex_kubes npm test -- --coverage
+  
+  deploy: 
+    provider: script
+    script: bash ./deploy.sh
+    on: 
+      branch: master
+    
